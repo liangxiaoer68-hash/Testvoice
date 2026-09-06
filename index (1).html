@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đọc Truyện — chuyển văn bản thành giọng nói</title>
+<meta name="description" content="Dán truyện của bạn vào, nghe và tải file MP3, hoàn toàn miễn phí và không giới hạn — chạy ngay trong trình duyệt bằng Piper TTS.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+<!--
+  Import map: "onnxruntime-web/wasm" là một "bare specifier" mà thư viện
+  piper-tts-web gọi bằng import() ở runtime. Trình duyệt không tự biết link
+  CDN tương ứng, nên phải khai báo rõ ở đây. Không cần chỉnh sửa gì thêm.
+-->
+<script type="importmap">
+{
+  "imports": {
+    "onnxruntime-web/wasm": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/esm/ort.wasm.min.js"
+  }
+}
+</script>
+
+<!-- Bộ mã hoá MP3 thuần JavaScript, chạy hoàn toàn phía trình duyệt -->
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+</head>
+<body>
+
+<div class="lamp-glow" aria-hidden="true"></div>
+
+<header class="site-header">
+  <h1>Đọc Truyện</h1>
+  <p class="tagline">Dán chữ vào, nghe truyện được đọc lên bằng giọng AI, và tải file MP3 về máy — miễn phí, không giới hạn, không cần tài khoản.</p>
+</header>
+
+<main class="workspace">
+
+  <!-- MANUSCRIPT: nơi soạn / đọc văn bản -->
+  <section class="manuscript" aria-label="Nội dung truyện">
+    <div class="manuscript-head">
+      <span class="manuscript-label">Bản thảo</span>
+      <div class="manuscript-actions">
+        <button type="button" id="clearBtn" class="ghost-btn">Xoá</button>
+        <button type="button" id="sampleBtn" class="ghost-btn">Dùng đoạn mẫu</button>
+      </div>
+    </div>
+
+    <textarea
+      id="editArea"
+      placeholder="Dán hoặc gõ truyện của bạn vào đây…"
+      spellcheck="false"
+    ></textarea>
+
+    <div id="readArea" class="read-area" hidden aria-live="polite"></div>
+
+    <div class="manuscript-foot">
+      <span id="wordCount">0 từ</span>
+      <span id="chunkPosition"></span>
+    </div>
+  </section>
+
+  <!-- PLAYER: điều khiển giọng đọc -->
+  <aside class="player" aria-label="Điều khiển đọc truyện">
+
+    <div class="player-block">
+      <label for="voiceSelect">Giọng đọc (AI Piper — chạy offline trong máy bạn)</label>
+      <select id="voiceSelect">
+        <option value="vi_VN-vais1000-medium">Tiếng Việt — vais1000 (chất lượng tốt nhất)</option>
+        <option value="vi_VN-25hours_single-low">Tiếng Việt — 25hours (nhẹ, tải nhanh hơn)</option>
+        <option value="vi_VN-vivos-x_low">Tiếng Việt — vivos (nhẹ nhất)</option>
+      </select>
+      <p class="voice-note" id="voiceNote">
+        Lần đầu dùng mỗi giọng, trình duyệt sẽ tải mô hình về (khoảng 20–60MB) rồi lưu lại — các lần sau dùng ngay, kể cả khi mất mạng.
+      </p>
+    </div>
+
+    <div class="player-block sliders">
+      <div class="slider-row">
+        <label for="rateRange">Tốc độ phát <span id="rateValue">1.0×</span></label>
+        <input type="range" id="rateRange" min="0.6" max="1.6" step="0.1" value="1">
+      </div>
+      <div class="slider-row">
+        <label for="volumeRange">Âm lượng <span id="volumeValue">100%</span></label>
+        <input type="range" id="volumeRange" min="0" max="1" step="0.05" value="1">
+      </div>
+    </div>
+
+    <div class="transport">
+      <button type="button" id="prevBtn" class="transport-btn" title="Câu trước" aria-label="Câu trước">
+        <svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14l-11-7z"/></svg>
+      </button>
+      <button type="button" id="playBtn" class="transport-btn primary" title="Đọc" aria-label="Đọc">
+        <svg id="playIcon" viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg>
+        <svg id="pauseIcon" viewBox="0 0 24 24" hidden><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+      </button>
+      <button type="button" id="stopBtn" class="transport-btn" title="Dừng hẳn" aria-label="Dừng hẳn">
+        <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+      </button>
+      <button type="button" id="nextBtn" class="transport-btn" title="Câu tiếp" aria-label="Câu tiếp">
+        <svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>
+      </button>
+    </div>
+
+    <progress id="genProgress" max="100" value="0" hidden></progress>
+    <p class="player-status" id="playerStatus">Sẵn sàng.</p>
+
+    <div class="player-block download-block">
+      <button type="button" id="downloadBtn" class="download-btn" disabled>
+        <svg viewBox="0 0 24 24"><path d="M12 3v10.5m0 0l-4-4m4 4l4-4M5 19h14"/></svg>
+        Tải file MP3
+      </button>
+      <p class="download-hint" id="downloadHint">
+        Bấm "Đọc" trước để tạo giọng đọc, xong mới tải MP3 được.
+      </p>
+    </div>
+
+  </aside>
+
+</main>
+
+<footer class="site-footer">
+  <p>Giọng đọc chạy hoàn toàn trên máy bạn bằng Piper TTS (mã nguồn mở) — văn bản và âm thanh không được gửi lên server nào cả.</p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
