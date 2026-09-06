@@ -66,7 +66,7 @@ body{
   margin:0;
   color:var(--text-faint);
   font-size:1.02rem;
-  max-width:52ch;
+  max-width:56ch;
   line-height:1.5;
 }
 
@@ -199,7 +199,7 @@ body{
   padding:22px;
   display:flex;
   flex-direction:column;
-  gap:22px;
+  gap:20px;
   position:sticky;
   top:24px;
 }
@@ -222,10 +222,10 @@ body{
   font-size:0.92rem;
 }
 
-.voice-warning{
+.voice-note{
   margin:10px 0 0;
   font-size:0.78rem;
-  color:var(--amber);
+  color:var(--text-faint);
   line-height:1.5;
 }
 
@@ -286,6 +286,7 @@ input[type="range"]::-moz-range-thumb{
 }
 .transport-btn svg{ width:18px; height:18px; fill:currentColor; }
 .transport-btn:hover{ border-color: var(--teal); transform: translateY(-1px); }
+.transport-btn:disabled{ opacity:0.35; cursor:not-allowed; transform:none; }
 .transport-btn.primary{
   width:58px; height:58px;
   background: var(--amber);
@@ -295,12 +296,62 @@ input[type="range"]::-moz-range-thumb{
 .transport-btn.primary svg{ width:22px; height:22px; }
 .transport-btn.primary:hover{ background: var(--amber-strong); }
 
+#genProgress{
+  width:100%;
+  height:6px;
+  -webkit-appearance:none;
+  appearance:none;
+  border:none;
+  border-radius:3px;
+  overflow:hidden;
+}
+#genProgress::-webkit-progress-bar{ background: var(--ink-line); border-radius:3px; }
+#genProgress::-webkit-progress-value{ background: var(--amber); border-radius:3px; }
+#genProgress::-moz-progress-bar{ background: var(--amber); border-radius:3px; }
+
 .player-status{
   text-align:center;
   font-size:0.82rem;
   color:var(--text-faint);
   margin:0;
   min-height:1.2em;
+}
+
+.download-block{
+  border-top:1px solid var(--ink-line);
+  padding-top:18px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.download-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  background: transparent;
+  border:1px solid var(--teal);
+  color: var(--teal);
+  border-radius:6px;
+  padding:11px 14px;
+  font-family:var(--font-ui);
+  font-weight:600;
+  font-size:0.92rem;
+  cursor:pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.download-btn svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.download-btn:hover:not(:disabled){ background: var(--teal); color: var(--ink); }
+.download-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+
+.download-hint{
+  margin:0;
+  font-size:0.76rem;
+  color:var(--text-faint);
+  line-height:1.5;
+  text-align:center;
 }
 
 .site-footer{
